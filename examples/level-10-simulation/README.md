@@ -1,96 +1,110 @@
 # Level 10: Simulation-First Development
 
 ## The Paradigm Shift
+
 ```
-Old: Idea -> Build MVP -> Ship -> Measure -> Learn -> Iterate
-New: Idea -> Simulate -> Learn -> Build (only what survived) -> Ship (with confidence)
+Old: Idea → Build MVP → Ship → Measure → Learn → Iterate
+New: Idea → Simulate → Learn → Build (only what survived) → Ship (with confidence)
 ```
 
-You do not need to test 50 ideas with real users if simulation eliminates 45 of them.
+## Synthetic User Panel — Starter Code
 
-## Synthetic User Panel - Starter Code
+### `synthetic-panel.js`
 
 ```javascript
-// synthetic-panel.js
+// Synthetic User Panel — Test product concepts before building
 // Requires: npm install @anthropic-ai/sdk
-const Anthropic = require('@anthropic-ai/sdk').default;
+const Anthropic = require("@anthropic-ai/sdk").default;
 const client = new Anthropic();
 
 const PERSONAS = [
   {
-    name: 'Sarah - Budget-Conscious Freelancer',
-    profile: `32yo freelance designer. Income: $45K/year, variable.
-    Pain: invoicing, time tracking, tax prep. Tech comfort: high.
-    Decision style: researches extensively, tries free tier first.`
+    name: "Sarah — Budget-Conscious Freelancer",
+    profile: `32yo freelance designer. $45K/year. Uses free tools.
+    Pain: invoicing, time tracking. Researches extensively, tries free tier first.`
   },
   {
-    name: 'Marcus - Scaling Agency Owner',
-    profile: `41yo owner of 12-person digital marketing agency.
-    Revenue: $1.2M/year. 8+ SaaS tools that do not talk to each other.
-    Pain: team coordination, client reporting, tool sprawl.`
+    name: "Marcus — Scaling Agency Owner",
+    profile: `41yo, 12-person agency. $1.2M/year. 8+ SaaS tools.
+    Pain: tool sprawl, margins. Wants ROI proof and case studies.`
   },
   {
-    name: 'Tom - Skeptical Small Business Owner',
-    profile: `55yo plumbing company owner. 6 employees. Uses paper invoices.
-    Pain: scheduling, no-shows, collecting payments.
-    Tech comfort: low. Needs to see it working in 5 minutes or walks away.`
+    name: "Priya — Privacy-First Parent",
+    profile: `38yo PM at healthcare co. Two kids. Extremely privacy-conscious.
+    Reads privacy policies. Wants local-first, open source, EU hosting.`
+  },
+  {
+    name: "Tom — Skeptical SMB Owner",
+    profile: `55yo plumber, 6 employees. Paper invoices + QuickBooks.
+    Low tech comfort. Needs to see it working in 5 minutes or walks away.`
+  },
+  {
+    name: "Aisha — Gen Z Creator",
+    profile: `24yo, 85K followers. $30K from brand deals.
+    Extremely high tech comfort but zero patience for setup.`
   }
 ];
 
 const PRODUCT_CONCEPT = `
-A unified workspace for small businesses replacing 5+ tools.
-Handles invoicing, scheduling, client communication, task management.
-Pricing: $29/mo solo, $79/mo teams up to 10. No free tier, 14-day trial.
-Key differentiator: AI assistant handles follow-ups and scheduling.
+Unified workspace replacing 5+ tools. Invoicing, scheduling, comms, tasks, analytics.
+$29/mo solo, $79/mo teams. AI assistant for follow-ups. 14-day trial, no free tier.
 `;
 
 const QUESTIONS = [
-  'What is your immediate gut reaction? Would you try this?',
-  'What is the single biggest objection or concern?',
-  'What would need to be true for you to switch from your current tools?',
-  'Rate likelihood to try: 1 (no) to 10 (signing up now). Explain.'
+  "Gut reaction? Would you click Start Free Trial or leave?",
+  "Biggest objection or concern?",
+  "What would need to be true for you to switch?",
+  "Describe this product to a friend in one sentence.",
+  "Likelihood to try: 1-10. Explain your number."
 ];
 
 async function testPersona(persona) {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: "claude-sonnet-4-20250514",
     max_tokens: 1500,
-    system: `You ARE ${persona.name}. ${persona.profile}
-    Be honest and realistic. Do NOT be generically positive.`,
-    messages: [{
-      role: 'user',
-      content: `Product: ${PRODUCT_CONCEPT}\n\nAnswer:\n${QUESTIONS.map((q,i) => `${i+1}. ${q}`).join('\n')}`
-    }]
+    system: `You ARE ${persona.name}. Respond as they would. Be honest. Do NOT be generically positive.\n\n${persona.profile}`,
+    messages: [{ role: "user", content: `PRODUCT:\n${PRODUCT_CONCEPT}\n\nQUESTIONS:\n${QUESTIONS.map((q,i)=>`${i+1}. ${q}`).join("\n")}` }]
   });
   return response.content[0].text;
 }
 
 async function runPanel() {
-  console.log('=== SYNTHETIC USER PANEL ===');
-  for (const persona of PERSONAS) {
-    console.log(`\n--- ${persona.name} ---`);
-    const response = await testPersona(persona);
-    console.log(response);
+  const results = [];
+  for (const p of PERSONAS) {
+    console.log(`\n${"-".repeat(60)}\n${p.name}\n`);
+    const r = await testPersona(p);
+    console.log(r);
+    results.push({ persona: p.name, response: r });
   }
+
+  // Synthesis
+  const synthesis = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1500,
+    messages: [{ role: "user", content: `Analyze these panel results:\n${results.map(r=>`### ${r.persona}\n${r.response}`).join("\n\n")}\n\nProvide: overall verdict, common objections, biggest risk, segment split, recommended next step.` }]
+  });
+  console.log("\nSYNTHESIS:\n" + synthesis.content[0].text);
 }
 
 runPanel().catch(console.error);
 ```
 
 ## How to Use
-1. Replace personas with profiles from YOUR CRM data
-2. Replace the product concept with what you are testing
-3. Run the panel. Look for patterns across personas.
+
+1. Replace personas with YOUR CRM data
+2. Replace product concept with what you're testing
+3. Run the panel, look for patterns
 4. Calibrate against known real-world outcomes
-5. Kill ideas that fail simulation before building them
+5. Iterate. Only build what survives.
 
 ## Epistemic Caveat
-Synthetic validation is a warm-up act, not the main event.
-AI cannot invent reality. Use it to narrow 50 hypotheses to 5,
-then validate survivors with real humans.
+
+Simulation narrows the hypothesis space. It doesn't replace real users. Use it to eliminate 45 of 50 ideas, then validate the 5 survivors with real humans.
 
 ## Level Up Checklist
-- [ ] You have run at least one synthetic panel against a real concept
-- [ ] Personas are grounded in real data (CRM, interviews)
-- [ ] You have calibrated simulation results against real outcomes
-- [ ] You have killed at least one idea based on simulation before building it
+
+- [ ] Run at least one synthetic panel against a real concept
+- [ ] Personas grounded in real data, not imagination
+- [ ] Calibrated results against a known outcome
+- [ ] Killed at least one idea based on simulation
+- [ ] Team development loop starts with "simulate"

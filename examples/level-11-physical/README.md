@@ -1,81 +1,88 @@
 # Level 11: Physical-Digital Bridge
 
 ## The Shift
-Your agent does not just write code. It controls physical devices, reads sensors, and triggers manufacturing.
 
-## Home Assistant as the Bridge Layer
+The IDE becomes a control surface for reality.
+
 ```
-AI Agent -> Home Assistant REST API -> Device (lights, HVAC, printer)
-                                            |
-                                      Sensor feedback
-                                            |
-                              Home Assistant -> Agent context
+AI Agent → Home Assistant REST API → Device
+                                        ↓
+                                  Sensor feedback
+                                        ↓
+                            Home Assistant → Agent context
 ```
 
-## Example: Agent Controls Office Environment
+## Agent Controls Office Environment
 
 ```javascript
 const HA_URL = process.env.HA_URL;
 const HA_TOKEN = process.env.HA_TOKEN;
 
 async function callService(domain, service, entityId, data = {}) {
-  const response = await fetch(`${HA_URL}/api/services/${domain}/${service}`, {
+  return fetch(`${HA_URL}/api/services/${domain}/${service}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${HA_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Authorization': `Bearer ${HA_TOKEN}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ entity_id: entityId, ...data }),
-  });
-  return response.json();
-}
-
-async function getSensorState(entityId) {
-  const response = await fetch(`${HA_URL}/api/states/${entityId}`, {
-    headers: { 'Authorization': `Bearer ${HA_TOKEN}` },
-  });
-  return response.json();
+  }).then(r => r.json());
 }
 
 async function prepareOfficeForCall() {
-  const temp = await getSensorState('sensor.office_temperature');
-  const co2 = await getSensorState('sensor.office_co2');
-  const actions = [];
-  if (parseFloat(temp.state) > 24) {
-    actions.push(callService('climate', 'set_temperature',
-      'climate.office_ac', { temperature: 22 }));
-  }
-  if (parseInt(co2.state) > 1000) {
-    actions.push(callService('fan', 'turn_on',
-      'fan.office_purifier', { percentage: 75 }));
-  }
-  actions.push(callService('light', 'turn_on',
-    'light.office_desk', { brightness: 200, color_temp: 350 }));
-  await Promise.all(actions);
+  const temp = await fetch(`${HA_URL}/api/states/sensor.office_temperature`,
+    { headers: { 'Authorization': `Bearer ${HA_TOKEN}` } }).then(r => r.json());
+
+  if (parseFloat(temp.state) > 24)
+    await callService('climate', 'set_temperature', 'climate.office_ac', { temperature: 22 });
+
+  await callService('light', 'turn_on', 'light.office_desk', { brightness: 200, color_temp: 350 });
+  await callService('light', 'turn_off', 'light.office_overhead');
+}
+```
+
+## 3D Print Orchestration via OctoPrint
+
+```javascript
+const OCTO_URL = process.env.OCTOPRINT_URL;
+const OCTO_KEY = process.env.OCTOPRINT_KEY;
+
+async function startPrint(filename) {
+  await fetch(`${OCTO_URL}/api/files/local/${filename}`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': OCTO_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'select', print: true }),
+  });
+}
+
+async function emergencyStop() {
+  await fetch(`${OCTO_URL}/api/job`, {
+    method: 'POST',
+    headers: { 'X-Api-Key': OCTO_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'cancel' }),
+  });
+  console.log('EMERGENCY STOP');
 }
 ```
 
 ## Physical Safety Backpressure
-This is what makes Level 11 fundamentally different. A bug in code wastes tokens. A bug in a physical control loop wastes material, energy, or worse.
 
-### Required Safety Constraints
 ```javascript
 const SAFETY_LIMITS = {
-  maxTemperature: 28,      // degrees C
+  maxTemperature: 28,
   minTemperature: 16,
-  maxPowerDraw: 3000,      // Watts
-  maxPrintDuration: 480,   // minutes
-  maxFilamentCost: 50,     // USD
+  maxPowerDraw: 3000,
+  maxPrintDuration: 480,  // minutes
+  maxFilamentCost: 50,    // USD
 };
 
-// The human override: a PHYSICAL kill switch
-// Not a software toggle. Hardware that cuts power.
-// Software can be wrong. Hardware cannot lie.
+// The human override: a PHYSICAL kill switch that cannot be software-bypassed
+// Hardware button or smart plug that cuts power
+// Not a software toggle — software can be wrong, hardware can't lie
 ```
 
 ## Level Up Checklist
+
 - [ ] Agent reads at least one physical sensor
 - [ ] Agent controls at least one physical device
-- [ ] Physical safety limits block agent actions outside safe ranges
-- [ ] You have a physical kill switch (not software) for critical devices
-- [ ] Agent actions have produced a real-world change you can see or touch
+- [ ] Physical safety limits block unsafe actions
+- [ ] Physical kill switch exists (not software)
+- [ ] Agent actions produced a real-world change
+- [ ] Feedback loop: agent acts → sensor confirms → agent adjusts

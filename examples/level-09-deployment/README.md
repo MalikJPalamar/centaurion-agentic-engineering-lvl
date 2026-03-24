@@ -1,16 +1,17 @@
 # Level 9: Autonomous Deployment Pipeline
 
 ## The Goal
+
 From a prompt on your phone to a live production URL, with no laptop required.
 
 ```
-Phone prompt -> Agent generates page -> Git push -> CI tests ->
-AI review -> Deploy -> Verify live -> Send notification
+Phone prompt → Agent generates page → Git push → CI tests →
+AI review → Deploy → Verify live → Send notification
 ```
 
 ## Starter GitHub Actions Workflow
 
-### .github/workflows/auto-deploy.yml
+### `.github/workflows/auto-deploy.yml`
 
 ```yaml
 name: Autonomous Deploy Pipeline
@@ -65,21 +66,22 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
+      - run: sleep 30
       - name: Verify live site
         run: |
-          sleep 30
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PRODUCTION_URL }})
           if [ "$STATUS" != "200" ]; then exit 1; fi
-      - name: Notify via Slack
+          echo "Site is live"
+      - uses: slackapi/slack-github-action@v1.26
         if: success()
-        uses: slackapi/slack-github-action@v1.26
         with:
           payload: '{"text": "Deployed: ${{ github.event.head_commit.message }}"}'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 ```
 
-### lighthouserc.json
+### `lighthouserc.json`
+
 ```json
 {
   "ci": {
@@ -95,13 +97,15 @@ jobs:
 ```
 
 ## Phone-First Triggers
+
 - **Slack bot**: message a channel with the prompt
-- **GitHub Issue**: create from mobile app, label triggers agent
-- **Custom API**: POST to endpoint that starts the pipeline
+- **GitHub Issue**: create from mobile, label triggers the agent
+- **Custom API**: POST to an endpoint that starts the pipeline
 
 ## Level Up Checklist
+
 - [ ] CI pipeline builds, tests, and deploys on push
 - [ ] Quality gates block deploys below threshold
 - [ ] A non-technical person has triggered a deploy
 - [ ] Full cycle takes under 15 minutes
-- [ ] You can trigger and approve from your phone
+- [ ] Entire flow works from your phone
