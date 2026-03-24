@@ -1,4 +1,6 @@
-# CLAUDE.md Starter Template
+# CLAUDE.md — Starter Template
+
+# Project: [Your Project Name]
 
 ## What This Project Is
 [One paragraph describing the project, its purpose, and its users.]
@@ -9,26 +11,35 @@
 - Database: [e.g., PostgreSQL, Supabase, MongoDB]
 - Deployment: [e.g., Vercel, AWS, Hostinger VPS]
 
+## Project Structure
+```
+src/
+├── components/   # React components
+├── lib/          # Shared utilities
+├── api/          # API routes
+└── styles/       # CSS/Tailwind
+```
+
 ## Conventions
 - Use TypeScript strict mode
 - Prefer named exports over default exports
-- Use async/await over .then() chains
+- Use `async/await` over `.then()` chains
 - Error messages should be user-facing and helpful
-- All API responses follow { data, error } shape
+- All API responses follow `{ data, error }` shape
 
 ## Testing
-- Run tests: npm test
+- Run tests: `npm test`
 - Tests must pass before any PR is opened
 - Write tests for any new public function
 
 ## Things To Avoid
 - Do NOT introduce new dependencies without checking if an existing one covers it
-- Do NOT use any type in TypeScript
-- Do NOT hardcode environment-specific values use env vars
+- Do NOT use `any` type in TypeScript
+- Do NOT hardcode environment-specific values — use env vars
 - Do NOT modify the database schema without explicit approval
 
 ## Current Focus
-[What you are working on this week/sprint. Update regularly.]
+[What you're working on this week/sprint. Update regularly.]
 
 ## Known Issues
 [List any known bugs or tech debt the agent should be aware of.]
